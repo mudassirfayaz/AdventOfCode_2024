@@ -10,7 +10,7 @@ def calculate_total_distance(left_list, right_list):
 # Example input
 
 
-with open("adventofCode2024/input.txt") as f:
+with open("./Day1/input.txt") as f:
     lines = [[int(i) for i in l.split()] for l in f]
 # Part 1
 l1, l2 = [list(sorted(x)) for x in zip(*lines)]
