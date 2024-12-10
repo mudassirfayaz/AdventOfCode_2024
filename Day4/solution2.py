@@ -1,40 +1,71 @@
-def count_xmas(input_file):
-    # Read input
-    with open(input_file, 'r') as f:
-        grid = [line.strip() for line in f.readlines()]
+import numpy as np
 
-    rows = len(grid)
-    cols = len(grid[0])
+# Load and process the input
+with open("./Day4/input.txt") as f:
+    lines = [
+        list(x.strip().replace("A", "3").replace("M", "2").replace("S", "4").replace("X", "1"))
+        for x in f
+    ]
 
-    # Directions for the X-shape:
-    # (row_offset, col_offset) -> Direction for top-left to bottom-right, and top-right to bottom-left diagonals
-    directions = [(-1, -1), (-1, 1)]
+img = np.array(lines).astype("uint8")
 
-    def check_xmas(r, c):
-        # Check if we can form an X-MAS starting at (r, c)
-        # We need at least 3 rows and columns to form an X
-        if r - 1 < 0 or r + 1 >= rows or c - 1 < 0 or c + 1 >= cols:
-            return 0
-        
-        count = 0
-        for dr, dc in directions:
-            # Check diagonal direction (dr, dc)
-            # We need to check both forward "MAS" and backward "SAM"
-            # 1st diagonal: grid[r-1][c-1] -> M, grid[r][c] -> A, grid[r+1][c+1] -> S
-            # 2nd diagonal: grid[r-1][c+1] -> M, grid[r][c] -> A, grid[r+1][c-1] -> S
-            if (grid[r - 1][c - 1] == 'M' and grid[r][c] == 'A' and grid[r + 1][c + 1] == 'S') or \
-               (grid[r - 1][c + 1] == 'M' and grid[r][c] == 'A' and grid[r + 1][c - 1] == 'S'):
-                count += 1
-        return count
+# Part 1
 
-    # Iterate over all possible starting points in the grid
-    total_xmas = 0
-    for r in range(1, rows - 1):  # Start from row 1 to rows-1 to avoid out-of-bounds
-        for c in range(1, cols - 1):  # Start from column 1 to cols-1 to avoid out-of-bounds
-            total_xmas += check_xmas(r, c)
+def find_part1(arr):
+    # Check if the center element is "X"
+    if arr[3, 3] == 1:
+        pos = [
+            tuple(arr[3, 4:7]),
+            tuple(arr[3, 2::-1]),
+            tuple(arr[4:7, 3]),
+            tuple(arr[2::-1, 3]),
+            tuple(arr[4:7, 4:7].diagonal()),
+            tuple(arr[2::-1, 2::-1].diagonal()),
+            tuple(arr[4:7, 2::-1].diagonal()),
+            tuple(arr[2::-1, 4:7].diagonal()),
+        ]
+        return sum(p == (2, 3, 4) for p in pos)
+    return 0
 
-    return total_xmas
+def apply_filter_part1(img):
+    padded_img = np.pad(img, pad_width=3, mode="constant", constant_values=0)
+    res = np.zeros_like(img, dtype=int)
 
-# Example usage:
-input_file = "./Day4/input.txt"
-print("Total X-MAS count:", count_xmas(input_file))
+    for i in range(img.shape[0]):
+        for j in range(img.shape[1]):
+            region = padded_img[i:i+7, j:j+7]
+            res[i, j] = find_part1(region)
+
+    return res
+
+res_part1 = apply_filter_part1(img)
+print(res_part1)
+print(np.sum(res_part1))
+
+# Part 2
+
+def find_part2(arr):
+    # Check if the center element is "A"
+    if arr[1, 1] == 3:
+        return any([
+            arr[0, 0] == 2 and arr[0, 2] == 4 and arr[2, 0] == 2 and arr[2, 2] == 4,
+            arr[0, 0] == 4 and arr[0, 2] == 2 and arr[2, 0] == 4 and arr[2, 2] == 2,
+            arr[0, 0] == 2 and arr[0, 2] == 2 and arr[2, 0] == 4 and arr[2, 2] == 4,
+            arr[0, 0] == 4 and arr[0, 2] == 4 and arr[2, 0] == 2 and arr[2, 2] == 2,
+        ])
+    return 0
+
+def apply_filter_part2(img):
+    padded_img = np.pad(img, pad_width=1, mode="constant", constant_values=0)
+    res = np.zeros_like(img, dtype=int)
+
+    for i in range(img.shape[0]):
+        for j in range(img.shape[1]):
+            region = padded_img[i:i+3, j:j+3]
+            res[i, j] = find_part2(region)
+
+    return res
+
+res_part2 = apply_filter_part2(img)
+print(res_part2)
+print(np.sum(res_part2))
