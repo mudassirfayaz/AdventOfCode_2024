@@ -1,61 +1,52 @@
-from heapq import heappush, heappop
-from collections import namedtuple
+import re
+import os
+from rich import print
 
-Node = namedtuple('Node', ['score', 'y', 'x', 'dir', 'c'])
+input_path = os.path.join(os.path.dirname(__file__), 'input.txt')
+program = list(map(int, re.findall(r"\d+", open(input_path).read())[3:]))
+assert program[-2:] == [3, 0], "program does not end with JNZ 0"
 
-# Process the input to include only valid numeric characters
-with open("./Day17/input.txt", "r") as f:
-    pInput = [
-        [int(char) for char in line.strip() if char.isdigit()] 
-        for line in f
-    ]
+def find(target, ans):
+    if target == []: return ans
+    for t in range(8):
+        a = ans << 3 | t
+        b = 0
+        c = 0
+        output = None
+        adv3 = False
 
-width, height = len(pInput[0]), len(pInput)
+        def combo(operand):
+            if 0 <= operand <= 3: return operand
+            if operand == 4: return a
+            if operand == 5: return b
+            if operand == 6: return c
+            raise AssertionError(f"unrecognized combo operand {operand}")
 
-def isOOB(y, x):
-    """Check if the given (y, x) is out of bounds of the grid."""
-    return y < 0 or y >= height or x < 0 or x >= width
+        for pointer in range(0, len(program) - 2, 2):
+            ins = program[pointer]
+            operand = program[pointer + 1]
+            if ins == 0:
+                assert not adv3, "program has multiple ADVs"
+                assert operand == 3, "program has ADV with operand other than 3"
+                adv3 = True
+            elif ins == 1:
+                b = b ^ operand
+            elif ins == 2:
+                b = combo(operand) % 8
+            elif ins == 3:
+                raise AssertionError("program has JNZ inside expected loop body")
+            elif ins == 4:
+                b = b ^ c
+            elif ins == 5:
+                assert output is None, "program has multiple OUT"
+                output = combo(operand) % 8
+            elif ins == 6:
+                b = a >> combo(operand)
+            elif ins == 7:
+                c = a >> combo(operand)
+            if output == target[-1]:
+                sub = find(target[:-1], a)
+                if sub is None: continue
+                return sub
 
-alldirs = ((0, 1, '>'), (1, 0, 'V'), (0, -1, '<'), (-1, 0, 'A'))
-opposite = {a: b for a, b in zip('<>AV', '><VA')}
-
-MIN, MAX = (1, 3)
-MIN, MAX = (4, 10)
-
-def expand(node):
-    """Generate neighboring nodes for the UCS algorithm."""
-    for dy, dx, dir in alldirs:
-        if opposite[node.dir] == dir:
-            continue
-        if dir != node.dir and node.c < MIN:
-            continue
-        new_y = node.y + dy
-        new_x = node.x + dx
-        if isOOB(new_y, new_x):
-            continue
-        if dir == node.dir:
-            if node.c < MAX:
-                yield Node(node.score + pInput[new_y][new_x], new_y, new_x, dir, node.c + 1)
-        else:
-            yield Node(node.score + pInput[new_y][new_x], new_y, new_x, dir, 1)
-
-def ucs():
-    """Uniform Cost Search to find the optimal path."""
-    closed = set()
-    open = []
-    heappush(open, Node(0, 0, 0, '>', 0))
-    heappush(open, Node(0, 0, 0, 'V', 0))
-
-    while open:
-        node = heappop(open)
-        if node.y == height - 1 and node.x == width - 1 and node.c >= MIN:
-            return node.score
-        if node[1:] in closed:
-            continue
-        closed.add(node[1:])
-        for s in expand(node):
-            heappush(open, s)
-
-    return -1
-
-print(ucs())
+print(find(program, 0))
